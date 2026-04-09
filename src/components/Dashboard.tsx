@@ -1,0 +1,82 @@
+import { useMemo } from 'react';
+import { Header } from './Header';
+import { SyncProgressBar } from './SyncProgressBar';
+import { ChatterSelector } from './ChatterSelector';
+import { PeriodSwitcher } from './PeriodSwitcher';
+import { MoneyTable } from './MoneyTable';
+import { ActivityTable } from './ActivityTable';
+import { useAppStore } from '@/lib/store';
+import { useMetricsWindow, useMembers } from '@/hooks/useMetricsWindow';
+import { toDerived } from '@/lib/formulas';
+import type { MetricsRow } from '@/lib/db';
+
+interface Props { onRefresh: () => Promise<void> }
+
+export function Dashboard({ onRefresh }: Props) {
+  const settings = useAppStore(s => s.settings);
+  const selectedUserId = useAppStore(s => s.selectedUserId);
+  const setSelectedUserId = useAppStore(s => s.setSelectedUserId);
+  const setWindowDays = useAppStore(s => s.setWindowDays);
+
+  const allRows = useMetricsWindow(settings.windowDays);
+  const members = useMembers();
+
+  const rowsForChatter: MetricsRow[] = useMemo(() => {
+    const filtered = selectedUserId == null
+      ? aggregateByDate(allRows)
+      : allRows.filter(r => r.userId === selectedUserId);
+    // Always newest first
+    return [...filtered].sort((a, b) => b.date.localeCompare(a.date))
+      // Recompute derived live if shiftHours / commissionRate changed without re-sync
+      .map(r => ({ ...r, derived: toDerived(r.raw, settings) }));
+  }, [allRows, selectedUserId, settings]);
+
+  return (
+    <div className="min-h-screen">
+      <Header onRefresh={() => void onRefresh()} />
+      <SyncProgressBar />
+
+      <div className="sticky top-14 z-20 flex items-center justify-between gap-4 border-b border-slate-200/60 bg-white/80 px-4 py-3 backdrop-blur dark:border-slate-800/60 dark:bg-slate-950/80">
+        <ChatterSelector
+          chatters={members}
+          selectedId={selectedUserId}
+          onSelect={setSelectedUserId}
+        />
+        <PeriodSwitcher value={settings.windowDays} onChange={setWindowDays} />
+      </div>
+
+      <main className="grid gap-6 px-4 py-6 lg:grid-cols-2">
+        <section>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Деньги</h2>
+          <MoneyTable rows={rowsForChatter} />
+        </section>
+        <section>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Активность</h2>
+          <ActivityTable rows={rowsForChatter} />
+        </section>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * When no chatter is selected, sum all chatters per date
+ * so the tables still show one row per day.
+ */
+function aggregateByDate(rows: MetricsRow[]): MetricsRow[] {
+  const byDate = new Map<string, MetricsRow>();
+  for (const r of rows) {
+    const existing = byDate.get(r.date);
+    if (!existing) {
+      byDate.set(r.date, { ...r, userId: 0, key: `${r.date}|ALL`, raw: { ...r.raw } });
+      continue;
+    }
+    const addedRaw = { ...existing.raw } as Record<string, number>;
+    for (const k of Object.keys(r.raw) as (keyof typeof r.raw)[]) {
+      const v = Number((r.raw as Record<string, unknown>)[k]) || 0;
+      addedRaw[k as string] = (Number(addedRaw[k as string]) || 0) + v;
+    }
+    byDate.set(r.date, { ...existing, raw: addedRaw as typeof r.raw });
+  }
+  return Array.from(byDate.values());
+}
