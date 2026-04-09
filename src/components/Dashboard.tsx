@@ -46,11 +46,18 @@ export function Dashboard({ onRefresh }: Props) {
       </div>
 
       <main className="grid gap-6 px-4 py-6 lg:grid-cols-2">
-        <section>
+        {/*
+          min-w-0 on grid items is required so the child `overflow-x-auto` wrapper
+          around each table actually scrolls horizontally instead of forcing the
+          grid cell (default min-width: auto = intrinsic content size) to expand
+          past the viewport. Without it, at certain widths (e.g. ~90% zoom) the
+          MoneyTable gets clipped on the left because the grid overflows.
+        */}
+        <section className="min-w-0">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Деньги</h2>
           <MoneyTable rows={rowsForChatter} />
         </section>
-        <section>
+        <section className="min-w-0">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Активность</h2>
           <ActivityTable rows={rowsForChatter} />
         </section>
