@@ -45,6 +45,7 @@ export function ChatterSelector({ chatters, selectedId, onSelect }: Props) {
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
+            data-hotkey="search"
             autoFocus
           />
         </div>
