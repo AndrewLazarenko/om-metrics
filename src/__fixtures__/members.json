@@ -1,0 +1,9 @@
+{
+  "items": [
+    { "id": 1001, "name": "Ростик Tina" },
+    { "id": 1002, "name": "Никита Shelly" },
+    { "id": 1003, "name": "Vlad Cami" },
+    { "id": 1004, "name": "Alex Chloe" }
+  ],
+  "total": 4
+}

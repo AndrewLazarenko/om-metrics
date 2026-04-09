@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "user_id": 1003,
+      "tips_amount_sum": 0,
+      "sold_messages_price_sum": 0,
+      "fans_count": 0,
+      "messages_count": 0,
+      "reply_time_avg": 0,
+      "media_messages_count": 0,
+      "paid_messages_count": 0,
+      "sold_messages_count": 0,
+      "internal_templates_count": 0,
+      "copied_messages_count": 0,
+      "paid_messages_price_sum": 0,
+      "words_count_sum": 0,
+      "ai_generated_messages_count": 0
+    },
+    {
+      "user_id": 1004,
+      "tips_amount_sum": 1000,
+      "sold_messages_price_sum": null,
+      "fans_count": 50,
+      "messages_count": 900,
+      "reply_time_avg": 45,
+      "paid_messages_count": 20,
+      "sold_messages_count": 0,
+      "paid_messages_price_sum": 400,
+      "words_count_sum": 3000,
+      "ai_generated_messages_count": 0
+    }
+  ],
+  "total": 2
+}

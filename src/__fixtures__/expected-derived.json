@@ -1,0 +1,52 @@
+{
+  "1001_day1": {
+    "grossSales": 500,
+    "sales": 400,
+    "msgPerHour": 240,
+    "chatPerHour": 12,
+    "replyMinutes": 1.5833333333333333,
+    "openRate": 0.55,
+    "avgPriceSent": 22,
+    "avgPriceSold": 20.454545454545453
+  },
+  "1002_day1": {
+    "grossSales": 120,
+    "sales": 96,
+    "msgPerHour": 100,
+    "chatPerHour": 5,
+    "replyMinutes": 3,
+    "openRate": 0.4,
+    "avgPriceSent": 20,
+    "avgPriceSold": 20
+  },
+  "1001_day2": {
+    "grossSales": 600,
+    "sales": 480,
+    "msgPerHour": 220,
+    "chatPerHour": 11.333333333333334,
+    "replyMinutes": 1.8333333333333333,
+    "openRate": 0.5428571428571428,
+    "avgPriceSent": 22,
+    "avgPriceSold": 27.63157894736842
+  },
+  "1003_day3": {
+    "grossSales": 0,
+    "sales": 0,
+    "msgPerHour": 0,
+    "chatPerHour": 0,
+    "replyMinutes": 0,
+    "openRate": 0,
+    "avgPriceSent": 0,
+    "avgPriceSold": 0
+  },
+  "1004_day3": {
+    "grossSales": 1000,
+    "sales": 800,
+    "msgPerHour": 150,
+    "chatPerHour": 8.333333333333334,
+    "replyMinutes": 0.75,
+    "openRate": 0,
+    "avgPriceSent": 20,
+    "avgPriceSold": 0
+  }
+}
