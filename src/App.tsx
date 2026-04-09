@@ -61,12 +61,12 @@ export default function App() {
     }
   }, [token, settings, setSyncing, setSyncError, setSyncProgress]);
 
-  useAutoSync(runIncrementalSync);
+  useAutoSync(runInitialSync, runIncrementalSync);
 
   if (!token) {
     return (
       <TooltipProvider>
-        <Landing onTokenAccepted={runInitialSync} />
+        <Landing />
       </TooltipProvider>
     );
   }

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useAppStore } from '@/lib/store';
 import { validateToken, OmApiError } from '@/lib/om-api';
 
-export function Landing({ onTokenAccepted }: { onTokenAccepted: () => void }) {
+export function Landing() {
   const setToken = useAppStore(s => s.setToken);
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +23,9 @@ export function Landing({ onTokenAccepted }: { onTokenAccepted: () => void }) {
     setBusy(true);
     try {
       await validateToken(token);
+      // Persist the token. App.tsx's useAutoSync will notice the token
+      // change and dispatch runInitialSync (first time) automatically.
       setToken(token);
-      onTokenAccepted();
     } catch (err) {
       if (err instanceof OmApiError && (err.status === 401 || err.status === 403)) {
         setError('Токен невалидный. Проверь и попробуй ещё раз.');
