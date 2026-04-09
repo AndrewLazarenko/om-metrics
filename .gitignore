@@ -6,3 +6,8 @@ dist
 .env.local
 coverage
 .DS_Store
+
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+vite.config.js.timestamp-*.mjs
