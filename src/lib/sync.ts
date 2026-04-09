@@ -23,9 +23,7 @@ export interface SyncOptions {
   onProgress?: (p: SyncProgress) => void;
 }
 
-export interface InitialSyncOptions extends SyncOptions {
-  windowDays: number;
-}
+export type InitialSyncOptions = SyncOptions;
 
 function rowsFromDay(range: DayRange, items: MetricsRaw[], settings: FormulaSettings): MetricsRow[] {
   return items.map((raw): MetricsRow => {
@@ -42,12 +40,15 @@ function rowsFromDay(range: DayRange, items: MetricsRaw[], settings: FormulaSett
 }
 
 /**
- * Full initial sync: members + N days of metrics (newest → oldest).
+ * Full initial sync: members + KEEP_DAYS days of metrics (newest → oldest).
+ * Always fetches the maximum window so switching `windowDays` in the UI never
+ * requires a re-sync — the UI just filters what's already in IDB.
  * Emits progress after each day.
  */
 export async function initialSync(opts: InitialSyncOptions): Promise<void> {
-  const { token, windowDays, settings, onProgress } = opts;
-  const totalSteps = windowDays + 1; // +1 for members
+  const { token, settings, onProgress } = opts;
+  const daysToFetch = OM_CONFIG.KEEP_DAYS;
+  const totalSteps = daysToFetch + 1; // +1 for members
   let completed = 0;
 
   onProgress?.({ label: 'Загрузка списка чатеров', completed, total: totalSteps, done: false });
@@ -58,7 +59,7 @@ export async function initialSync(opts: InitialSyncOptions): Promise<void> {
   onProgress?.({ label: 'Список чатеров загружен', completed, total: totalSteps, done: false });
 
   const syncedDates: string[] = [];
-  for (let i = 0; i < windowDays; i++) {
+  for (let i = 0; i < daysToFetch; i++) {
     const range = getKyivDayRange(i);
     onProgress?.({ label: `Загрузка метрик: ${range.day}`, completed, total: totalSteps, done: false });
     const items = await fetchMetricsRange(token, range.from, range.to);

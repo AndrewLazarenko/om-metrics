@@ -3,6 +3,7 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { clearAll, db } from '@/lib/db';
 import { initialSync, incrementalSync, type SyncProgress } from '@/lib/sync';
+import { OM_CONFIG } from '@/lib/config';
 
 const BASE = 'https://omapi.onlymonster.ai/api/v0';
 
@@ -46,27 +47,25 @@ afterEach(() => {
 });
 
 describe('initialSync', () => {
-  it('fetches N days of metrics + members and writes to db', async () => {
+  it('fetches KEEP_DAYS of metrics + members and writes to db', async () => {
     const events: SyncProgress[] = [];
     await initialSync({
       token: 'tok',
-      windowDays: 3,
       settings: { shiftHours: 6, commissionRate: 0.2 },
       onProgress: p => events.push(p),
     });
 
     const metrics = await db.metrics.toArray();
     const members = await db.members.toArray();
-    expect(metrics).toHaveLength(3);           // 3 days × 1 item
+    expect(metrics).toHaveLength(OM_CONFIG.KEEP_DAYS); // KEEP_DAYS × 1 item/day
     expect(members).toHaveLength(2);
-    expect(events.length).toBeGreaterThanOrEqual(3);
+    expect(events.length).toBeGreaterThanOrEqual(OM_CONFIG.KEEP_DAYS);
     expect(events[events.length - 1].done).toBe(true);
   });
 
   it('computes derived fields using passed settings', async () => {
     await initialSync({
       token: 'tok',
-      windowDays: 1,
       settings: { shiftHours: 8, commissionRate: 0.3 },
     });
     const row = (await db.metrics.toArray())[0];
@@ -77,9 +76,15 @@ describe('initialSync', () => {
   });
 
   it('stores the per-row composite key as `${date}|${userId}`', async () => {
-    await initialSync({ token: 'tok', windowDays: 1, settings: { shiftHours: 6, commissionRate: 0.2 } });
+    await initialSync({ token: 'tok', settings: { shiftHours: 6, commissionRate: 0.2 } });
     const row = (await db.metrics.toArray())[0];
     expect(row.key).toBe(`${row.date}|${row.userId}`);
+  });
+
+  it('records KEEP_DAYS worth of syncedDates in meta for backfill detection', async () => {
+    await initialSync({ token: 'tok', settings: { shiftHours: 6, commissionRate: 0.2 } });
+    const meta = await db.meta.get(1);
+    expect(meta?.syncedDates?.length).toBe(OM_CONFIG.KEEP_DAYS);
   });
 });
 
@@ -96,7 +101,7 @@ describe('incrementalSync', () => {
     });
     await incrementalSync({ token: 'tok', settings: { shiftHours: 6, commissionRate: 0.2 } });
     const old = await db.metrics.get('2020-01-01|999');
-    expect(old).toBeTruthy(); // untouched (prune runs only if windowDays specified)
+    expect(old).toBeTruthy(); // untouched (incremental sync never prunes)
     const fresh = await db.metrics.where('date').above('2026-04-01').toArray();
     expect(fresh.length).toBeGreaterThan(0);
   });

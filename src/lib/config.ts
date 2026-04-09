@@ -12,7 +12,10 @@ export const OM_CONFIG = {
   TZ: 'Europe/Kyiv',
   METRICS_PAGE_LIMIT: 100,
   MEMBERS_PAGE_LIMIT: 50,
-  KEEP_DAYS: 20,
+  // Always fetch exactly this many days on initial sync and keep them in IDB.
+  // Must be >= max(WINDOW_OPTIONS) so switching windowDays in the UI never
+  // shows an empty tail. This is the max display window the user can select.
+  KEEP_DAYS: 30,
   BACKFILL_DAYS: 7,
   API_RETRIES: 4,
   API_RETRY_BASE_MS: 1200,

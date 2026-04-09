@@ -1,8 +1,5 @@
 import { Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { clearAll } from '@/lib/db';
-import { useAppStore } from '@/lib/store';
 
 interface Props {
   open: boolean;
@@ -10,17 +7,6 @@ interface Props {
 }
 
 export function InfoDialog({ open, onOpenChange }: Props) {
-  const clearTokenAction = useAppStore(s => s.clearTokenAction);
-  const setSelectedUserId = useAppStore(s => s.setSelectedUserId);
-
-  async function handleWipe() {
-    if (!confirm('Стереть все данные (токен, метрики, настройки)? Это нельзя отменить.')) return;
-    await clearAll();
-    clearTokenAction();
-    setSelectedUserId(null);
-    onOpenChange(false);
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
@@ -31,7 +17,7 @@ export function InfoDialog({ open, onOpenChange }: Props) {
         <div className="space-y-4 text-sm">
           <p>
             <strong>Что это.</strong> Локальный дашборд для агентств на OnlyFans/Fansly, которые используют
-            OnlyMonster. Вставь свой auth-token — получи две heatmap-таблицы с метриками за последние 20 дней.
+            OnlyMonster. Вставь свой auth-token — получи две heatmap-таблицы с метриками за последние 30 дней.
           </p>
           <p>
             <strong>Где живут данные.</strong> Токен — в <code>localStorage</code> твоего браузера.
@@ -48,10 +34,11 @@ export function InfoDialog({ open, onOpenChange }: Props) {
             </ol>
           </div>
 
+          <p className="text-slate-500">
+            Чтобы отключить токен и удалить локальные данные — открой Настройки.
+          </p>
+
           <div className="flex flex-col gap-2 pt-2">
-            <Button variant="destructive" onClick={handleWipe}>
-              Очистить все данные
-            </Button>
             <a
               href="https://t.me/bubbleteam"
               target="_blank"

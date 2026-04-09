@@ -13,6 +13,11 @@ type Runner = () => Promise<void>;
  *   This replaces Landing.onTokenAccepted's old call path which suffered
  *   from a stale-closure bug (the prop was captured when token was null,
  *   and the underlying useCallback early-returned because of that).
+ * - If prior sync exists but covers fewer than KEEP_DAYS days → runInitial.
+ *   This handles users who first synced under the old behavior where
+ *   initialSync fetched only `windowDays` days (e.g. 7). Now we always
+ *   backfill to the full KEEP_DAYS window so switching periods in the UI
+ *   shows real data instead of empty tails.
  * - If prior sync exists and is older than AUTO_SYNC_THRESHOLD_MS → runIncremental.
  * - Otherwise → no-op.
  *
@@ -36,6 +41,14 @@ export function useAutoSync(runInitial: Runner, runIncremental: Runner): void {
       const last = meta.lastMetricsSyncAt ? new Date(meta.lastMetricsSyncAt).getTime() : 0;
       if (last === 0) {
         try { await runInitial(); } catch (e) { console.error('initial sync failed', e); }
+        return;
+      }
+      // Backfill: if the last initial didn't cover the full KEEP_DAYS window
+      // (e.g. user first synced when initialSync respected windowDays=7),
+      // re-run initial to fetch the missing days.
+      const covered = meta.syncedDates?.length ?? 0;
+      if (covered < OM_CONFIG.KEEP_DAYS) {
+        try { await runInitial(); } catch (e) { console.error('backfill initial sync failed', e); }
         return;
       }
       const age = Date.now() - last;

@@ -27,7 +27,6 @@ export default function App() {
     try {
       await initialSync({
         token,
-        windowDays: settings.windowDays,
         settings: { shiftHours: settings.shiftHours, commissionRate: settings.commissionRate },
         onProgress: p => setSyncProgress(p),
       });
