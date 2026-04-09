@@ -74,14 +74,21 @@ export async function initialSync(opts: InitialSyncOptions): Promise<void> {
 }
 
 /**
- * Re-fetches the last BACKFILL_DAYS days to upsert any changes / late data.
+ * Re-fetches the last BACKFILL_DAYS days to upsert any changes / late data,
+ * and refreshes the members list (so newly added/removed chatters show up).
  * Does not touch older records, does not prune.
  */
 export async function incrementalSync(opts: SyncOptions): Promise<void> {
   const { token, settings, onProgress } = opts;
   const days = OM_CONFIG.BACKFILL_DAYS;
-  const total = days;
+  const total = days + 1; // +1 for members refresh
   let completed = 0;
+
+  onProgress?.({ label: 'Обновление списка чатеров', completed, total, done: false });
+  const members = await fetchAllMembers(token);
+  await upsertMembers(members);
+  await updateMeta({ lastMembersSyncAt: new Date().toISOString() });
+  completed++;
 
   for (let i = 0; i < days; i++) {
     const range = getKyivDayRange(i);

@@ -100,4 +100,11 @@ describe('incrementalSync', () => {
     const fresh = await db.metrics.where('date').above('2026-04-01').toArray();
     expect(fresh.length).toBeGreaterThan(0);
   });
+
+  it('also refreshes members (so new/removed chatters propagate)', async () => {
+    await incrementalSync({ token: 'tok', settings: { shiftHours: 6, commissionRate: 0.2 } });
+    const members = await db.members.toArray();
+    expect(members).toHaveLength(2);
+    expect(members.map(m => m.name).sort()).toEqual(['Alice', 'Bob']);
+  });
 });

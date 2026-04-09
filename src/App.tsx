@@ -21,6 +21,7 @@ export default function App() {
 
   const runInitialSync = useCallback(async () => {
     if (!token) return;
+    if (useAppStore.getState().syncing) return;
     setSyncing(true);
     setSyncError(null);
     try {
@@ -42,6 +43,7 @@ export default function App() {
 
   const runIncrementalSync = useCallback(async () => {
     if (!token) return;
+    if (useAppStore.getState().syncing) return;
     setSyncing(true);
     setSyncError(null);
     try {
