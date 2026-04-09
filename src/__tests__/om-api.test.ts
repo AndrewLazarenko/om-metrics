@@ -116,8 +116,12 @@ describe('retry logic', () => {
     server.use(http.get(`${BASE}/members`, () => HttpResponse.json({ error: 'boom' }, { status: 500 })));
     vi.useFakeTimers();
     const promise = fetchAllMembers('tok');
+    // Attach a catch handler synchronously so Vitest/Node don't flag this as
+    // an unhandled rejection between the reject and the `expect(...).rejects`
+    // assertion below (which only attaches its handler after runAllTimersAsync).
+    const assertion = expect(promise).rejects.toMatchObject({ status: 500 });
     await vi.runAllTimersAsync();
-    await expect(promise).rejects.toMatchObject({ status: 500 });
+    await assertion;
     vi.useRealTimers();
   });
 });
