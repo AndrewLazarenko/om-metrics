@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Send, Lock, Zap, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,13 +11,27 @@ export function Landing() {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Return focus to the token input whenever an error is shown AND the field
+  // is no longer disabled by the `busy` state. Using an effect is more robust
+  // than calling .focus() inline because the input may still be disabled at
+  // the exact moment the error is set (React hasn't re-rendered busy=false
+  // yet, and .focus() on a disabled input is a no-op).
+  useEffect(() => {
+    if (error && !busy) inputRef.current?.focus();
+  }, [error, busy]);
+
+  function showError(msg: string) {
+    setError(msg);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     const token = value.trim();
     if (!token) {
-      setError('Вставь токен');
+      showError('Вставь токен');
       return;
     }
     setBusy(true);
@@ -28,9 +42,9 @@ export function Landing() {
       setToken(token);
     } catch (err) {
       if (err instanceof OmApiError && (err.status === 401 || err.status === 403)) {
-        setError('Токен невалидный. Проверь и попробуй ещё раз.');
+        showError('Токен невалидный. Проверь и попробуй ещё раз.');
       } else {
-        setError('Не удалось проверить токен. Проверь сеть.');
+        showError('Не удалось проверить токен. Проверь сеть.');
       }
     } finally {
       setBusy(false);
@@ -54,6 +68,7 @@ export function Landing() {
         <form onSubmit={handleSubmit} className="w-full max-w-md space-y-3">
           <Label htmlFor="om-token">OnlyMonster Auth Token</Label>
           <Input
+            ref={inputRef}
             id="om-token"
             type="password"
             autoComplete="off"
@@ -63,8 +78,14 @@ export function Landing() {
             className={error ? 'border-red-500 focus-visible:ring-red-400' : ''}
             disabled={busy}
             autoFocus
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={error ? 'om-token-error' : undefined}
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && (
+            <p id="om-token-error" role="alert" className="text-sm text-red-500">
+              {error}
+            </p>
+          )}
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? 'Проверяю…' : 'Загрузить данные'}
           </Button>

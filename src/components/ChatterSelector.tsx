@@ -32,6 +32,7 @@ export function ChatterSelector({ chatters, selectedId, onSelect }: Props) {
           variant="outline"
           role="button"
           className="w-64 justify-between"
+          data-hotkey="open-search"
         >
           <span className="truncate">{selected ? selected.name : 'Выбери чатера'}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
