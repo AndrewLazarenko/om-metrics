@@ -1,5 +1,14 @@
+// In production (vercel.app) the direct upstream is CORS-blocked for the
+// `x-om-auth-token` header. We use a Vercel same-origin rewrite
+// (`/api/omproxy/*` → `https://omapi.onlymonster.ai/api/v0/*`, see vercel.json).
+// In dev and tests the upstream is reached directly because localhost is
+// allowed by the OM API CORS policy and msw handlers match the absolute URL.
+const API_BASE = import.meta.env.PROD
+  ? '/api/omproxy'
+  : 'https://omapi.onlymonster.ai/api/v0';
+
 export const OM_CONFIG = {
-  BASE_URL: 'https://omapi.onlymonster.ai/api/v0',
+  BASE_URL: API_BASE,
   TZ: 'Europe/Kyiv',
   METRICS_PAGE_LIMIT: 100,
   MEMBERS_PAGE_LIMIT: 50,

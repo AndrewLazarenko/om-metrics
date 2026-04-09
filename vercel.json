@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/omproxy/:path*",
+      "destination": "https://omapi.onlymonster.ai/api/v0/:path*"
+    }
+  ]
+}
