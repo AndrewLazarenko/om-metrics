@@ -22,6 +22,11 @@ export const OM_CONFIG = {
   PAGE_SLEEP_MS: 300,
   REQUEST_TIMEOUT_MS: 30_000,
   AUTO_SYNC_THRESHOLD_MS: 6 * 60 * 60 * 1000,
+  // How many day-ranges to fetch in parallel during initial/incremental sync.
+  // 6 matches the browser's per-origin HTTP/1.1 connection limit; on Vercel's
+  // HTTP/2 proxy we could go higher but 6 keeps the OM API happy and our
+  // retry logic (429/5xx backoff) takes care of the rare burst rejection.
+  SYNC_CONCURRENCY: 6,
 } as const;
 
 export const DEFAULT_SETTINGS = {
