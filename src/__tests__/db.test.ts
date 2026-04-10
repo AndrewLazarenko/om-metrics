@@ -1,5 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { db, upsertMetrics, upsertMembers, getMetricsForWindow, clearAll, updateMeta, getMeta, type MetricsRow } from '@/lib/db';
+import {
+  db,
+  upsertMetrics,
+  upsertMembers,
+  getMetricsForWindow,
+  getPreviousMetricsForWindow,
+  clearAll,
+  updateMeta,
+  getMeta,
+  type MetricsRow,
+} from '@/lib/db';
 
 function row(date: string, userId: number, sales = 100): MetricsRow {
   return {
@@ -74,6 +84,34 @@ describe('db', () => {
     await updateMeta({ lastMetricsSyncAt: iso });
     const meta = await getMeta();
     expect(meta.lastMetricsSyncAt).toBe(iso);
+  });
+
+  it('getPreviousMetricsForWindow returns the N days before the current window', async () => {
+    // window = 7 days. Current window covers days [0..6], previous = [7..13].
+    const mkDate = (daysAgo: number) =>
+      new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10);
+    await upsertMetrics([
+      row(mkDate(0), 1),   // current
+      row(mkDate(6), 1),   // current edge
+      row(mkDate(7), 1),   // prev edge (last day of prev window)
+      row(mkDate(10), 1),  // prev middle
+      row(mkDate(13), 1),  // prev edge (first day)
+      row(mkDate(14), 1),  // outside prev
+    ]);
+    const prev = await getPreviousMetricsForWindow(7);
+    const dates = prev.map(r => r.date).sort();
+    expect(dates).toContain(mkDate(7));
+    expect(dates).toContain(mkDate(10));
+    expect(dates).toContain(mkDate(13));
+    expect(dates).not.toContain(mkDate(0));
+    expect(dates).not.toContain(mkDate(6));
+    expect(dates).not.toContain(mkDate(14));
+  });
+
+  it('getPreviousMetricsForWindow returns empty when no prior data exists', async () => {
+    await upsertMetrics([row(new Date().toISOString().slice(0, 10), 1)]);
+    const prev = await getPreviousMetricsForWindow(7);
+    expect(prev).toHaveLength(0);
   });
 
   it('clearAll wipes tables', async () => {

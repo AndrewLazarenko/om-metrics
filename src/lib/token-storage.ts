@@ -2,6 +2,7 @@ import { DEFAULT_SETTINGS, type WindowDays } from './config';
 
 const TOKEN_KEY = 'om-metrics-token';
 const SETTINGS_KEY = 'om-metrics-settings';
+const UI_STATE_KEY = 'om-metrics-ui-state';
 
 export interface StoredSettings {
   shiftHours: number;
@@ -9,6 +10,21 @@ export interface StoredSettings {
   windowDays: WindowDays;
   theme: 'light' | 'dark';
 }
+
+/**
+ * Ephemeral UI selections that should survive a page reload but do not
+ * belong in `StoredSettings` (those are user-facing, editable in the
+ * Settings dialog). These are "where I left off" bookmarks.
+ */
+export interface StoredUiState {
+  selectedUserId: number | null;
+  aggMode: 'sum' | 'avg';
+}
+
+const DEFAULT_UI_STATE: StoredUiState = {
+  selectedUserId: null,
+  aggMode: 'avg',
+};
 
 export function loadToken(): string | null {
   try {
@@ -39,4 +55,29 @@ export function loadSettings(): StoredSettings {
 
 export function saveSettings(s: StoredSettings): void {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+export function loadUiState(): StoredUiState {
+  try {
+    const raw = localStorage.getItem(UI_STATE_KEY);
+    if (!raw) return { ...DEFAULT_UI_STATE };
+    const parsed = JSON.parse(raw);
+    const uid = parsed?.selectedUserId;
+    const mode = parsed?.aggMode;
+    return {
+      selectedUserId:
+        typeof uid === 'number' && Number.isFinite(uid) ? uid : null,
+      aggMode: mode === 'sum' || mode === 'avg' ? mode : 'avg',
+    };
+  } catch {
+    return { ...DEFAULT_UI_STATE };
+  }
+}
+
+export function saveUiState(s: StoredUiState): void {
+  try {
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify(s));
+  } catch {
+    /* quota / private mode — swallow, next session just defaults */
+  }
 }

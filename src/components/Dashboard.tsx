@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Header } from './Header';
 import { SyncProgressBar } from './SyncProgressBar';
 import { ChatterSelector } from './ChatterSelector';
@@ -7,9 +7,13 @@ import { AggregationToggle } from './AggregationToggle';
 import { MoneyTable } from './MoneyTable';
 import { ActivityTable } from './ActivityTable';
 import { useAppStore } from '@/lib/store';
-import { useMetricsWindow, useMembers } from '@/hooks/useMetricsWindow';
+import {
+  useMetricsWindow,
+  usePreviousMetricsWindow,
+  useMembers,
+} from '@/hooks/useMetricsWindow';
 import { toDerived } from '@/lib/formulas';
-import { aggregateByDate, type AggregationMode } from '@/lib/aggregate';
+import { aggregateByDate } from '@/lib/aggregate';
 import type { MetricsRow } from '@/lib/db';
 
 interface Props { onRefresh: () => Promise<void> }
@@ -19,23 +23,34 @@ export function Dashboard({ onRefresh }: Props) {
   const selectedUserId = useAppStore(s => s.selectedUserId);
   const setSelectedUserId = useAppStore(s => s.setSelectedUserId);
   const setWindowDays = useAppStore(s => s.setWindowDays);
-
-  // Local (session-only) aggregation mode: reset on reload per user request.
-  const [aggMode, setAggMode] = useState<AggregationMode>('avg');
+  const aggMode = useAppStore(s => s.aggMode);
+  const setAggMode = useAppStore(s => s.setAggMode);
 
   const allRows = useMetricsWindow(settings.windowDays);
+  const prevAllRows = usePreviousMetricsWindow(settings.windowDays);
   const members = useMembers();
 
-  const rowsForChatter: MetricsRow[] = useMemo(() => {
+  const shape = (rows: MetricsRow[]): MetricsRow[] => {
     const filtered = selectedUserId == null
-      ? aggregateByDate(allRows, aggMode)
-      : allRows.filter(r => r.userId === selectedUserId);
+      ? aggregateByDate(rows, aggMode)
+      : rows.filter(r => r.userId === selectedUserId);
     // Chronological order: oldest at top, newest just above the Σ/⌀ footer.
     // Reads left-to-right / top-to-bottom like a time series.
     return [...filtered].sort((a, b) => a.date.localeCompare(b.date))
       // Recompute derived live if shiftHours / commissionRate changed without re-sync
       .map(r => ({ ...r, derived: toDerived(r.raw, settings) }));
-  }, [allRows, selectedUserId, settings, aggMode]);
+  };
+
+  const rowsForChatter: MetricsRow[] = useMemo(
+    () => shape(allRows),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allRows, selectedUserId, settings, aggMode],
+  );
+  const prevRowsForChatter: MetricsRow[] = useMemo(
+    () => shape(prevAllRows),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prevAllRows, selectedUserId, settings, aggMode],
+  );
 
   return (
     <div className="min-h-screen">
@@ -72,11 +87,11 @@ export function Dashboard({ onRefresh }: Props) {
         */}
         <section className="w-full min-w-0">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Деньги</h2>
-          <MoneyTable rows={rowsForChatter} />
+          <MoneyTable rows={rowsForChatter} prevRows={prevRowsForChatter} />
         </section>
         <section className="w-full min-w-0">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Активность</h2>
-          <ActivityTable rows={rowsForChatter} />
+          <ActivityTable rows={rowsForChatter} prevRows={prevRowsForChatter} />
         </section>
       </main>
     </div>

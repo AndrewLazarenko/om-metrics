@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
 import { SettingsDialog } from './SettingsDialog';
 import { InfoDialog } from './InfoDialog';
+import { LastSyncIndicator } from './LastSyncIndicator';
 import { useAppStore } from '@/lib/store';
 import logoUrl from '@/assets/bubbleteam-logo.jpg';
 
@@ -31,7 +32,8 @@ export function Header({ onRefresh }: Props) {
           />
           <span className="font-semibold">BubbleTeam Metrics</span>
         </a>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <LastSyncIndicator />
           <Button variant="ghost" size="icon" onClick={onRefresh} disabled={syncing} aria-label="Обновить">
             <RefreshCw className={syncing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
           </Button>

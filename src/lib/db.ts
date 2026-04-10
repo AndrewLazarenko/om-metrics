@@ -61,6 +61,27 @@ export async function getMetricsForWindow(windowDays: number): Promise<MetricsRo
   return all.sort((a, b) => (b.date.localeCompare(a.date) || a.userId - b.userId));
 }
 
+/**
+ * Returns the `windowDays` days immediately BEFORE `getMetricsForWindow`'s
+ * range — i.e. the previous equal-length period used for the "vs prev"
+ * delta row in the table footers. Dates fall in:
+ *   [today - 2*windowDays + 1,  today - windowDays]   (Kyiv-day inclusive)
+ */
+export async function getPreviousMetricsForWindow(windowDays: number): Promise<MetricsRow[]> {
+  const now = new Date();
+  const prevEnd = new Date(now);
+  prevEnd.setDate(now.getDate() - windowDays);
+  const prevStart = new Date(now);
+  prevStart.setDate(now.getDate() - (2 * windowDays - 1));
+  const startStr = prevStart.toISOString().slice(0, 10);
+  const endStr = prevEnd.toISOString().slice(0, 10);
+  const all = await db.metrics
+    .where('date')
+    .between(startStr, endStr, true, true)
+    .toArray();
+  return all.sort((a, b) => (b.date.localeCompare(a.date) || a.userId - b.userId));
+}
+
 export async function pruneOlderThan(keepDays: number): Promise<void> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - keepDays);

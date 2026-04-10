@@ -5,10 +5,12 @@ import { sumArr, avgArr } from '@/lib/formulas';
 import { formatMoney, formatInt, formatPct } from '@/lib/format';
 import { OM_CONFIG } from '@/lib/config';
 import { cn } from '@/lib/utils';
+import { computeDelta, formatDelta, type GoodDirection } from '@/lib/delta';
 import type { MetricsRow } from '@/lib/db';
 
 interface Props {
   rows: MetricsRow[]; // already filtered by chatter + window, sorted oldest → newest
+  prevRows?: MetricsRow[]; // same shape, previous equal-length period
 }
 
 const headers = [
@@ -22,7 +24,22 @@ const headers = [
   'Avg Price Sold',
 ];
 
-export function MoneyTable({ rows }: Props) {
+function computeMoneyTotals(rows: MetricsRow[]) {
+  const mask = rows.map(r => (r.raw.messages_count ?? 0) >= OM_CONFIG.DAYOFF_MIN_MESSAGES);
+  const keep = <T,>(arr: T[]): T[] => arr.filter((_, i) => mask[i]);
+  return {
+    sales: sumArr(keep(rows.map(r => r.derived.sales))),
+    freeMedia: sumArr(keep(rows.map(r => r.raw.media_messages_count ?? 0))),
+    ppvSent: sumArr(keep(rows.map(r => r.raw.paid_messages_count ?? 0))),
+    ppvSold: sumArr(keep(rows.map(r => r.raw.sold_messages_count ?? 0))),
+    openRate: avgArr(keep(rows.map(r => r.derived.openRate))),
+    avgSent: avgArr(keep(rows.map(r => r.derived.avgPriceSent))),
+    avgSold: avgArr(keep(rows.map(r => r.derived.avgPriceSold))),
+    count: mask.filter(Boolean).length,
+  };
+}
+
+export function MoneyTable({ rows, prevRows }: Props) {
   // See ActivityTable — same day-off masking rule keyed on messages_count.
   // Day-off rows are excluded from the color scale and totals.
   const activeMask = useMemo(
@@ -50,18 +67,25 @@ export function MoneyTable({ rows }: Props) {
     };
   }, [rows, activeMask]);
 
-  const totals = useMemo(() => {
-    const keep = <T,>(arr: T[]): T[] => arr.filter((_, i) => activeMask[i]);
+  const totals = useMemo(() => computeMoneyTotals(rows), [rows]);
+  const prevTotals = useMemo(
+    () => (prevRows && prevRows.length > 0 ? computeMoneyTotals(prevRows) : null),
+    [prevRows],
+  );
+  const deltas = useMemo(() => {
+    if (!prevTotals) return null;
+    const mk = (cur: number, prev: number, dir: GoodDirection = 'up') =>
+      formatDelta(computeDelta(cur, prev), dir);
     return {
-      sales: sumArr(keep(columns.sales.values)),
-      freeMedia: sumArr(keep(columns.freeMedia.values)),
-      ppvSent: sumArr(keep(columns.ppvSent.values)),
-      ppvSold: sumArr(keep(columns.ppvSold.values)),
-      openRate: avgArr(keep(columns.openRate.values)),
-      avgSent: avgArr(keep(columns.avgSent.values)),
-      avgSold: avgArr(keep(columns.avgSold.values)),
+      sales: mk(totals.sales, prevTotals.sales),
+      freeMedia: mk(totals.freeMedia, prevTotals.freeMedia),
+      ppvSent: mk(totals.ppvSent, prevTotals.ppvSent),
+      ppvSold: mk(totals.ppvSold, prevTotals.ppvSold),
+      openRate: mk(totals.openRate, prevTotals.openRate),
+      avgSent: mk(totals.avgSent, prevTotals.avgSent),
+      avgSold: mk(totals.avgSold, prevTotals.avgSold),
     };
-  }, [columns, activeMask]);
+  }, [totals, prevTotals]);
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
@@ -110,6 +134,21 @@ export function MoneyTable({ rows }: Props) {
               <td className="px-3 py-2 text-right tabular-nums">{formatMoney(totals.avgSent)}</td>
               <td className="px-3 py-2 text-right tabular-nums">{formatMoney(totals.avgSold)}</td>
             </tr>
+            {deltas && (
+              <tr
+                className="bg-slate-50/60 text-[10px] font-medium dark:bg-slate-900/40"
+                title="Изменение относительно предыдущего периода такой же длины"
+              >
+                <td className="px-3 py-1 text-slate-500">vs prev</td>
+                <td className={cn('px-3 py-1 text-right tabular-nums', deltas.sales?.className)}>{deltas.sales?.label ?? '—'}</td>
+                <td className={cn('px-3 py-1 text-right tabular-nums', deltas.freeMedia?.className)}>{deltas.freeMedia?.label ?? '—'}</td>
+                <td className={cn('px-3 py-1 text-right tabular-nums', deltas.ppvSent?.className)}>{deltas.ppvSent?.label ?? '—'}</td>
+                <td className={cn('px-3 py-1 text-right tabular-nums', deltas.ppvSold?.className)}>{deltas.ppvSold?.label ?? '—'}</td>
+                <td className={cn('px-3 py-1 text-right tabular-nums', deltas.openRate?.className)}>{deltas.openRate?.label ?? '—'}</td>
+                <td className={cn('px-3 py-1 text-right tabular-nums', deltas.avgSent?.className)}>{deltas.avgSent?.label ?? '—'}</td>
+                <td className={cn('px-3 py-1 text-right tabular-nums', deltas.avgSold?.className)}>{deltas.avgSold?.label ?? '—'}</td>
+              </tr>
+            )}
           </tfoot>
         )}
       </table>

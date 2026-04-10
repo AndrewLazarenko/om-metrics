@@ -13,15 +13,21 @@ export const OM_CONFIG = {
   METRICS_PAGE_LIMIT: 100,
   MEMBERS_PAGE_LIMIT: 50,
   // Always fetch exactly this many days on initial sync and keep them in IDB.
-  // Must be >= max(WINDOW_OPTIONS) so switching windowDays in the UI never
-  // shows an empty tail. This is the max display window the user can select.
-  KEEP_DAYS: 30,
+  // Must be >= 2 × max(WINDOW_OPTIONS) so the "Δ vs prev" delta row in the
+  // table footers can always compare the selected window against an equally
+  // sized preceding window. For windowDays=30 this means we need 60 days of
+  // history locally. Sync stays fast thanks to the parallel fetch pool.
+  KEEP_DAYS: 60,
   BACKFILL_DAYS: 7,
   API_RETRIES: 4,
   API_RETRY_BASE_MS: 1200,
   PAGE_SLEEP_MS: 300,
   REQUEST_TIMEOUT_MS: 30_000,
   AUTO_SYNC_THRESHOLD_MS: 6 * 60 * 60 * 1000,
+  // On tab visibility change (user returns to the app), auto-trigger an
+  // incremental sync if the last sync is older than this. Shorter than
+  // AUTO_SYNC_THRESHOLD_MS because this is cheap (only BACKFILL_DAYS=7).
+  VISIBILITY_SYNC_THRESHOLD_MS: 5 * 60 * 1000,
   // How many day-ranges to fetch in parallel during initial/incremental sync.
   // 6 matches the browser's per-origin HTTP/1.1 connection limit; on Vercel's
   // HTTP/2 proxy we could go higher but 6 keeps the OM API happy and our
