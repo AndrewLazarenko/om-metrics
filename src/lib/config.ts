@@ -27,6 +27,12 @@ export const OM_CONFIG = {
   // HTTP/2 proxy we could go higher but 6 keeps the OM API happy and our
   // retry logic (429/5xx backoff) takes care of the rare burst rejection.
   SYNC_CONCURRENCY: 6,
+  // Any chatter-day with fewer than this many `messages_count` is treated as
+  // a "day off" (выходной) even if the API returned a couple of stray
+  // messages (e.g. the chatter tested the login or wrote one quick reply).
+  // Such days are muted in the table AND excluded from the heatmap color
+  // scale + Σ/⌀ totals, so they don't squish the real working-day range.
+  DAYOFF_MIN_MESSAGES: 15,
 } as const;
 
 export const DEFAULT_SETTINGS = {

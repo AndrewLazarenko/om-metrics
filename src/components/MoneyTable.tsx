@@ -3,6 +3,8 @@ import { HeatmapCell } from './HeatmapCell';
 import { scaleColumn } from '@/lib/heatmap';
 import { sumArr, avgArr } from '@/lib/formulas';
 import { formatMoney, formatInt, formatPct } from '@/lib/format';
+import { OM_CONFIG } from '@/lib/config';
+import { cn } from '@/lib/utils';
 import type { MetricsRow } from '@/lib/db';
 
 interface Props {
@@ -21,6 +23,13 @@ const headers = [
 ];
 
 export function MoneyTable({ rows }: Props) {
+  // See ActivityTable — same day-off masking rule keyed on messages_count.
+  // Day-off rows are excluded from the color scale and totals.
+  const activeMask = useMemo(
+    () => rows.map(r => (r.raw.messages_count ?? 0) >= OM_CONFIG.DAYOFF_MIN_MESSAGES),
+    [rows],
+  );
+
   const columns = useMemo(() => {
     const sales = rows.map(r => r.derived.sales);
     const freeMedia = rows.map(r => r.raw.media_messages_count ?? 0);
@@ -31,25 +40,28 @@ export function MoneyTable({ rows }: Props) {
     const avgSold = rows.map(r => r.derived.avgPriceSold);
 
     return {
-      sales: { values: sales, colors: scaleColumn(sales, 'normal') },
-      freeMedia: { values: freeMedia, colors: scaleColumn(freeMedia, 'normal') },
-      ppvSent: { values: ppvSent, colors: scaleColumn(ppvSent, 'normal') },
-      ppvSold: { values: ppvSold, colors: scaleColumn(ppvSold, 'normal') },
-      openRate: { values: openRate, colors: scaleColumn(openRate, 'normal') },
-      avgSent: { values: avgSent, colors: scaleColumn(avgSent, 'normal') },
-      avgSold: { values: avgSold, colors: scaleColumn(avgSold, 'normal') },
+      sales: { values: sales, colors: scaleColumn(sales, 'normal', activeMask) },
+      freeMedia: { values: freeMedia, colors: scaleColumn(freeMedia, 'normal', activeMask) },
+      ppvSent: { values: ppvSent, colors: scaleColumn(ppvSent, 'normal', activeMask) },
+      ppvSold: { values: ppvSold, colors: scaleColumn(ppvSold, 'normal', activeMask) },
+      openRate: { values: openRate, colors: scaleColumn(openRate, 'normal', activeMask) },
+      avgSent: { values: avgSent, colors: scaleColumn(avgSent, 'normal', activeMask) },
+      avgSold: { values: avgSold, colors: scaleColumn(avgSold, 'normal', activeMask) },
     };
-  }, [rows]);
+  }, [rows, activeMask]);
 
-  const totals = {
-    sales: sumArr(columns.sales.values),
-    freeMedia: sumArr(columns.freeMedia.values),
-    ppvSent: sumArr(columns.ppvSent.values),
-    ppvSold: sumArr(columns.ppvSold.values),
-    openRate: avgArr(columns.openRate.values),
-    avgSent: avgArr(columns.avgSent.values),
-    avgSold: avgArr(columns.avgSold.values),
-  };
+  const totals = useMemo(() => {
+    const keep = <T,>(arr: T[]): T[] => arr.filter((_, i) => activeMask[i]);
+    return {
+      sales: sumArr(keep(columns.sales.values)),
+      freeMedia: sumArr(keep(columns.freeMedia.values)),
+      ppvSent: sumArr(keep(columns.ppvSent.values)),
+      ppvSold: sumArr(keep(columns.ppvSold.values)),
+      openRate: avgArr(keep(columns.openRate.values)),
+      avgSent: avgArr(keep(columns.avgSent.values)),
+      avgSold: avgArr(keep(columns.avgSold.values)),
+    };
+  }, [columns, activeMask]);
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
@@ -63,7 +75,11 @@ export function MoneyTable({ rows }: Props) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={row.key}>
+            <tr
+              key={row.key}
+              className={cn(!activeMask[i] && 'text-slate-400/60 dark:text-slate-600')}
+              title={!activeMask[i] ? 'Выходной (меньше порога сообщений)' : undefined}
+            >
               <td className="whitespace-nowrap border-b border-slate-200/40 px-3 py-2 font-mono text-xs text-slate-500 dark:border-slate-800/60">{row.date}</td>
               <HeatmapCell label={formatMoney(columns.sales.values[i])} color={columns.sales.colors[i]} />
               <HeatmapCell label={formatInt(columns.freeMedia.values[i])} color={columns.freeMedia.colors[i]} />

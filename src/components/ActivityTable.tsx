@@ -3,6 +3,8 @@ import { HeatmapCell } from './HeatmapCell';
 import { scaleColumn } from '@/lib/heatmap';
 import { sumArr, avgArr } from '@/lib/formulas';
 import { formatInt, formatNum, formatMinutes } from '@/lib/format';
+import { OM_CONFIG } from '@/lib/config';
+import { cn } from '@/lib/utils';
 import type { MetricsRow } from '@/lib/db';
 
 interface Props {
@@ -21,6 +23,15 @@ const headers = [
 ];
 
 export function ActivityTable({ rows }: Props) {
+  // A row is "active" if the chatter actually worked that day. The
+  // threshold catches days marked as выходной where a few stray messages
+  // still made it into the API response. Day-off rows are rendered muted
+  // and excluded from both the heatmap color scale and the Σ/⌀ footer.
+  const activeMask = useMemo(
+    () => rows.map(r => (r.raw.messages_count ?? 0) >= OM_CONFIG.DAYOFF_MIN_MESSAGES),
+    [rows],
+  );
+
   const columns = useMemo(() => {
     const chats = rows.map(r => r.raw.fans_count ?? 0);
     const msgs = rows.map(r => r.raw.messages_count ?? 0);
@@ -31,25 +42,31 @@ export function ActivityTable({ rows }: Props) {
     const ai = rows.map(r => r.raw.ai_generated_messages_count ?? 0);
 
     return {
-      chats: { v: chats, c: scaleColumn(chats, 'normal') },
-      msgs: { v: msgs, c: scaleColumn(msgs, 'normal') },
-      msgH: { v: msgH, c: scaleColumn(msgH, 'normal') },
-      chatH: { v: chatH, c: scaleColumn(chatH, 'normal') },
-      reply: { v: reply, c: scaleColumn(reply, 'inverted') }, // LOW is GREEN
-      words: { v: words, c: scaleColumn(words, 'normal') },
-      ai: { v: ai, c: scaleColumn(ai, 'inverted') }, // lower AI usage = better
+      chats: { v: chats, c: scaleColumn(chats, 'normal', activeMask) },
+      msgs: { v: msgs, c: scaleColumn(msgs, 'normal', activeMask) },
+      msgH: { v: msgH, c: scaleColumn(msgH, 'normal', activeMask) },
+      chatH: { v: chatH, c: scaleColumn(chatH, 'normal', activeMask) },
+      reply: { v: reply, c: scaleColumn(reply, 'inverted', activeMask) }, // LOW is GREEN
+      words: { v: words, c: scaleColumn(words, 'normal', activeMask) },
+      ai: { v: ai, c: scaleColumn(ai, 'inverted', activeMask) }, // lower AI usage = better
     };
-  }, [rows]);
+  }, [rows, activeMask]);
 
-  const totals = {
-    chats: sumArr(columns.chats.v),
-    msgs: sumArr(columns.msgs.v),
-    msgH: avgArr(columns.msgH.v),
-    chatH: avgArr(columns.chatH.v),
-    reply: avgArr(columns.reply.v),
-    words: sumArr(columns.words.v),
-    ai: sumArr(columns.ai.v),
-  };
+  // Totals computed only from active rows — day-off days are dropped
+  // from both Σ (sums) and ⌀ (averages) so two stray messages don't
+  // drag the weekly average down.
+  const totals = useMemo(() => {
+    const keep = <T,>(arr: T[]): T[] => arr.filter((_, i) => activeMask[i]);
+    return {
+      chats: sumArr(keep(columns.chats.v)),
+      msgs: sumArr(keep(columns.msgs.v)),
+      msgH: avgArr(keep(columns.msgH.v)),
+      chatH: avgArr(keep(columns.chatH.v)),
+      reply: avgArr(keep(columns.reply.v)),
+      words: sumArr(keep(columns.words.v)),
+      ai: sumArr(keep(columns.ai.v)),
+    };
+  }, [columns, activeMask]);
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
@@ -63,7 +80,11 @@ export function ActivityTable({ rows }: Props) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={row.key}>
+            <tr
+              key={row.key}
+              className={cn(!activeMask[i] && 'text-slate-400/60 dark:text-slate-600')}
+              title={!activeMask[i] ? 'Выходной (меньше порога сообщений)' : undefined}
+            >
               <td className="whitespace-nowrap border-b border-slate-200/40 px-3 py-2 font-mono text-xs text-slate-500 dark:border-slate-800/60">{row.date}</td>
               <HeatmapCell label={formatInt(columns.chats.v[i])} color={columns.chats.c[i]} />
               <HeatmapCell label={formatInt(columns.msgs.v[i])} color={columns.msgs.c[i]} />
