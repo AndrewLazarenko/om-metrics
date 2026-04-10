@@ -1,13 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Header } from './Header';
 import { SyncProgressBar } from './SyncProgressBar';
 import { ChatterSelector } from './ChatterSelector';
 import { PeriodSwitcher } from './PeriodSwitcher';
+import { AggregationToggle } from './AggregationToggle';
 import { MoneyTable } from './MoneyTable';
 import { ActivityTable } from './ActivityTable';
 import { useAppStore } from '@/lib/store';
 import { useMetricsWindow, useMembers } from '@/hooks/useMetricsWindow';
 import { toDerived } from '@/lib/formulas';
+import { aggregateByDate, type AggregationMode } from '@/lib/aggregate';
 import type { MetricsRow } from '@/lib/db';
 
 interface Props { onRefresh: () => Promise<void> }
@@ -18,18 +20,21 @@ export function Dashboard({ onRefresh }: Props) {
   const setSelectedUserId = useAppStore(s => s.setSelectedUserId);
   const setWindowDays = useAppStore(s => s.setWindowDays);
 
+  // Local (session-only) aggregation mode: reset on reload per user request.
+  const [aggMode, setAggMode] = useState<AggregationMode>('avg');
+
   const allRows = useMetricsWindow(settings.windowDays);
   const members = useMembers();
 
   const rowsForChatter: MetricsRow[] = useMemo(() => {
     const filtered = selectedUserId == null
-      ? aggregateByDate(allRows)
+      ? aggregateByDate(allRows, aggMode)
       : allRows.filter(r => r.userId === selectedUserId);
     // Always newest first
     return [...filtered].sort((a, b) => b.date.localeCompare(a.date))
       // Recompute derived live if shiftHours / commissionRate changed without re-sync
       .map(r => ({ ...r, derived: toDerived(r.raw, settings) }));
-  }, [allRows, selectedUserId, settings]);
+  }, [allRows, selectedUserId, settings, aggMode]);
 
   return (
     <div className="min-h-screen">
@@ -42,7 +47,12 @@ export function Dashboard({ onRefresh }: Props) {
           selectedId={selectedUserId}
           onSelect={setSelectedUserId}
         />
-        <PeriodSwitcher value={settings.windowDays} onChange={setWindowDays} />
+        <div className="flex items-center gap-2">
+          {selectedUserId == null && (
+            <AggregationToggle value={aggMode} onChange={setAggMode} />
+          )}
+          <PeriodSwitcher value={settings.windowDays} onChange={setWindowDays} />
+        </div>
       </div>
 
       <main className="grid gap-6 px-4 py-6 lg:grid-cols-2">
@@ -72,24 +82,3 @@ export function Dashboard({ onRefresh }: Props) {
   );
 }
 
-/**
- * When no chatter is selected, sum all chatters per date
- * so the tables still show one row per day.
- */
-function aggregateByDate(rows: MetricsRow[]): MetricsRow[] {
-  const byDate = new Map<string, MetricsRow>();
-  for (const r of rows) {
-    const existing = byDate.get(r.date);
-    if (!existing) {
-      byDate.set(r.date, { ...r, userId: 0, key: `${r.date}|ALL`, raw: { ...r.raw } });
-      continue;
-    }
-    const addedRaw = { ...existing.raw } as Record<string, number>;
-    for (const k of Object.keys(r.raw) as (keyof typeof r.raw)[]) {
-      const v = Number((r.raw as Record<string, unknown>)[k]) || 0;
-      addedRaw[k as string] = (Number(addedRaw[k as string]) || 0) + v;
-    }
-    byDate.set(r.date, { ...existing, raw: addedRaw as typeof r.raw });
-  }
-  return Array.from(byDate.values());
-}
