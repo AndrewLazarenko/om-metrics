@@ -64,7 +64,7 @@ export function MoneyTable({ rows }: Props) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={row.key}>
-              <td className="border-b border-slate-200/40 px-3 py-2 font-mono text-xs text-slate-500 dark:border-slate-800/60">{row.date}</td>
+              <td className="whitespace-nowrap border-b border-slate-200/40 px-3 py-2 font-mono text-xs text-slate-500 dark:border-slate-800/60">{row.date}</td>
               <HeatmapCell label={formatMoney(columns.sales.values[i])} color={columns.sales.colors[i]} />
               <HeatmapCell label={formatInt(columns.freeMedia.values[i])} color={columns.freeMedia.colors[i]} />
               <HeatmapCell label={formatInt(columns.ppvSent.values[i])} color={columns.ppvSent.colors[i]} />

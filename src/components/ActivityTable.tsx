@@ -64,7 +64,7 @@ export function ActivityTable({ rows }: Props) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={row.key}>
-              <td className="border-b border-slate-200/40 px-3 py-2 font-mono text-xs text-slate-500 dark:border-slate-800/60">{row.date}</td>
+              <td className="whitespace-nowrap border-b border-slate-200/40 px-3 py-2 font-mono text-xs text-slate-500 dark:border-slate-800/60">{row.date}</td>
               <HeatmapCell label={formatInt(columns.chats.v[i])} color={columns.chats.c[i]} />
               <HeatmapCell label={formatInt(columns.msgs.v[i])} color={columns.msgs.c[i]} />
               <HeatmapCell label={formatNum(columns.msgH.v[i], 1)} color={columns.msgH.c[i]} />
