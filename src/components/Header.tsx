@@ -17,14 +17,20 @@ export function Header({ onRefresh }: Props) {
   return (
     <>
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200/60 bg-white/80 px-4 backdrop-blur dark:border-slate-800/60 dark:bg-slate-950/80">
-        <div className="flex items-center gap-2">
+        <a
+          href="https://t.me/bubbleteam"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 rounded-lg transition hover:opacity-80"
+          aria-label="Telegram @bubbleteam"
+        >
           <img
             src={logoUrl}
             alt="BubbleTeam"
             className="h-10 w-10 rounded-lg object-cover shadow-sm"
           />
           <span className="font-semibold">BubbleTeam Metrics</span>
-        </div>
+        </a>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={onRefresh} disabled={syncing} aria-label="Обновить">
             <RefreshCw className={syncing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />

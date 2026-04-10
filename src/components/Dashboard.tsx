@@ -30,8 +30,9 @@ export function Dashboard({ onRefresh }: Props) {
     const filtered = selectedUserId == null
       ? aggregateByDate(allRows, aggMode)
       : allRows.filter(r => r.userId === selectedUserId);
-    // Always newest first
-    return [...filtered].sort((a, b) => b.date.localeCompare(a.date))
+    // Chronological order: oldest at top, newest just above the Σ/⌀ footer.
+    // Reads left-to-right / top-to-bottom like a time series.
+    return [...filtered].sort((a, b) => a.date.localeCompare(b.date))
       // Recompute derived live if shiftHours / commissionRate changed without re-sync
       .map(r => ({ ...r, derived: toDerived(r.raw, settings) }));
   }, [allRows, selectedUserId, settings, aggMode]);

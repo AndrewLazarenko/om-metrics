@@ -6,7 +6,7 @@ import { formatMoney, formatInt, formatPct } from '@/lib/format';
 import type { MetricsRow } from '@/lib/db';
 
 interface Props {
-  rows: MetricsRow[]; // already filtered by chatter + window, newest first
+  rows: MetricsRow[]; // already filtered by chatter + window, sorted oldest → newest
 }
 
 const headers = [
