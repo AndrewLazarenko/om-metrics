@@ -5,6 +5,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { SettingsDialog } from './SettingsDialog';
 import { InfoDialog } from './InfoDialog';
 import { useAppStore } from '@/lib/store';
+import logoUrl from '@/assets/bubbleteam-logo.jpg';
 
 interface Props { onRefresh: () => void }
 
@@ -17,7 +18,11 @@ export function Header({ onRefresh }: Props) {
     <>
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200/60 bg-white/80 px-4 backdrop-blur dark:border-slate-800/60 dark:bg-slate-950/80">
         <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded bg-gradient-to-br from-indigo-500 to-pink-500" />
+          <img
+            src={logoUrl}
+            alt="BubbleTeam"
+            className="h-10 w-10 rounded-lg object-cover shadow-sm"
+          />
           <span className="font-semibold">BubbleTeam Metrics</span>
         </div>
         <div className="flex items-center gap-1">
